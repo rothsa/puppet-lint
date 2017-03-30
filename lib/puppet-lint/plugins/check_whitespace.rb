@@ -57,17 +57,20 @@ end
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
 PuppetLint.new_check(:title_whitespace) do
   def check
-    resource_indexes.each_with_index do { |token, idx|
-      [:WHITESPACE, :RBRACE].include?(token.type)  
-    }.select { |token|
-      token.next_token.type == :WHITESPACE
-    }.each do |token|
-      notify :warning, {
-        :message => 'title whitespace found',
-        :line    => token.line,
-        :column  => token.column,
-        :token   => token,
-      }
+    resource_indexes.each_with_index do |res_idx|
+      resource_tokens = res_idx[:tokens]
+      resource_tokens.each do |token|
+        [:WHITESPACE, :RBRACE].include?(token.type).select { |token|
+        token.next_token.type == :WHITESPACE
+      }.each do |token|
+        notify :warning, {
+          :message => 'title whitespace found',
+          :line    => token.line,
+          :column  => token.column,
+          :token   => token,
+        }
+      	end
+      end
     end
   end
 
