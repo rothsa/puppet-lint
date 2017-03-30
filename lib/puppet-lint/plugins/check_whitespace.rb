@@ -52,35 +52,66 @@ PuppetLint.new_check(:trailing_whitespace) do
   end
 end
 
-# Public: Check the manifest tokens for resources names and titles that have more # or less than one space of separation and record a warning for each instance found.
+# Public: Check the manifest tokens for  titles that have more # or less than one space of separation before, and any space before the colon and record a warning for each instance found.
 #
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
-PuppetLint.new_check(:title_whitespace) do
+PuppetLint.new_check(:no_title_whitespace) do
   def check
-    resource_indexes.each_with_index do |res_idx|
-      resource_tokens = res_idx[:tokens]
-      resource_tokens.each do |token|
-        [:WHITESPACE, :RBRACE].include?(token.type).select { |token|
-        token.next_token.type == :WHITESPACE
-      }.each do |token|
+    PuppetLint::Data.title_tokens.each do |token|
+	if token.prev_token.type != :WHITESPACE || token.next_token.type == :WHITESPACE
         notify :warning, {
-          :message => 'title whitespace found',
+          :message => 'improper spacing found around resource title',
           :line    => token.line,
           :column  => token.column,
           :token   => token,
         }
-      	end
       end
     end
   end
 
   def fix(problem)
-    if problem[:manyspaces]
-    end
-    if problem[:nospaces]
+    if problem[:token]
+      prev_token = problem[:token].prev_token
+      next_token = problem[:token].next_token
+      prev_token.next_token = next_token
+      next_token.prev_token = prev_token unless next_token != :WHITESPACE
+      tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
     end
   end
 end
+
+# Public: Check the manifest tokens for resources names that have more # or less than one space of separation and record a warning for each instance found.
+# #
+# https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
+PuppetLint.new_check(:single_resource_whitespace) do
+  def check
+    resource_indexes.each do |res_idx|
+    resource_tokens = res_idx[:type]
+    puts resource_tokens.inspect
+    resource_tokens.each do |token|
+	if token.next_token.type != :WHITESPACE || token.next_token.next_token.type == :WHITESPACE
+        notify :warning, {
+          :message => 'improper spacing found around resource title',
+          :line    => token.line,
+          :column  => token.column,
+          :token   => token,
+        }
+      end
+    end
+    end
+  end
+
+  def fix(problem)
+    if problem[:token]
+      prev_token = problem[:token].prev_token
+      next_token = problem[:token].next_token
+      prev_token.next_token = next_token
+      next_token.prev_token = prev_token unless next_token != :WHITESPACE
+      tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
+    end
+  end
+end
+
 
 # Public: Test the raw manifest string for lines containing more than 140
 # characters and record a warning for each instance found.  The only exceptions
