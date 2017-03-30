@@ -107,6 +107,7 @@ describe 'title_whitespace' do
         file { '/tmp/bad2': ensure => file; }
         file { '/tmp/bad5': ensure => file; }"
       }
+      
       it 'should detect two problems' do
         expect(problems).to have(2).problem
       end
