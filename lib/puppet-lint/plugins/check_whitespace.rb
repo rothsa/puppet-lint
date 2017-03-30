@@ -52,6 +52,33 @@ PuppetLint.new_check(:trailing_whitespace) do
   end
 end
 
+# Public: Check the manifest tokens for resources names and titles that have more # or less than one space of separation and record a warning for each instance found.
+#
+# https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
+PuppetLint.new_check(:title_whitespace) do
+  def check
+    resource_indexes.each_with_index do { |token, idx|
+      [:WHITESPACE, :RBRACE].include?(token.type) || 
+    }.select { |token|
+      token.next_token.type == :WHITESPACE
+    }.each do |token|
+      notify :warning, {
+        :message => 'title whitespace found',
+        :line    => token.line,
+        :column  => token.column,
+        :token   => token,
+      }
+    end
+  end
+
+  def fix(problem)
+    if problem[:manyspaces]
+    end
+    if problem[:nospaces]
+    end
+  end
+end
+
 # Public: Test the raw manifest string for lines containing more than 140
 # characters and record a warning for each instance found.  The only exceptions
 # to this rule are lines containing URLs and template() calls which would hurt
