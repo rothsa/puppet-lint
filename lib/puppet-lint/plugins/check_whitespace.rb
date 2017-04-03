@@ -52,20 +52,20 @@ PuppetLint.new_check(:trailing_whitespace) do
   end
 end
 
-# Public: Check the manifest tokens for  titles that have more # or less than one space of separation before, and any space before the colon and record a warning for each instance found.
+# Public: Check the manifest tokens for titles that have more # or less than one space of separation before, and any space before the colon and record a warning for each instance found.
 #
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
-PuppetLint.new_check(:no_title_whitespace) do
+PuppetLint.new_check(:title_whitespace) do
   def check
     PuppetLint::Data.title_tokens.each do |token|
-	if token.prev_token.type != :WHITESPACE || token.next_token.type == :WHITESPACE
-        notify :warning, {
-          :message => 'improper spacing found around resource title',
-          :line    => token.line,
-          :column  => token.column,
-          :token   => token,
-        }
-      end
+    if token.prev_token.type != :WHITESPACE || token.next_token.type == :WHITESPACE
+      notify :warning, {
+        :message => 'improper spacing found around resource title',
+        :line    => token.line,
+        :column  => token.column,
+        :token   => token,
+      }
+    end
     end
   end
 
@@ -80,24 +80,22 @@ PuppetLint.new_check(:no_title_whitespace) do
   end
 end
 
-# Public: Check the manifest tokens for resources names that have more # or less than one space of separation and record a warning for each instance found.
+# Public: Check the manifest tokens for resource type declaration that have more # or less than one space of separation and record a warning for each instance found.
 # #
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
-PuppetLint.new_check(:single_resource_whitespace) do
+PuppetLint.new_check(:resource_whitespace) do
   def check
     resource_indexes.each do |res_idx|
-    resource_tokens = res_idx[:type]
-    puts resource_tokens.inspect
-    resource_tokens.each do |token|
-	if token.next_token.type != :WHITESPACE || token.next_token.next_token.type == :WHITESPACE
+      resource_tokens = res_idx[:type]
+      puts resource_tokens.class
+      if (token.next_token.type != :WHITESPACE || token.next_token.next_token.type == :WHITESPACE)
         notify :warning, {
-          :message => 'improper spacing found around resource title',
+          :message => 'incorrect resource declaration spacing found',
           :line    => token.line,
           :column  => token.column,
           :token   => token,
         }
       end
-    end
     end
   end
 

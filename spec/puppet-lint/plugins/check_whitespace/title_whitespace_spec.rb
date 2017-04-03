@@ -12,41 +12,23 @@ describe 'title_whitespace' do
       end
 
       it 'should create a warning' do
-        expect(problems).to contain_warning(msg).on_line(1).in_column(4)
+        expect(problems).to contain_warning(msg).on_line(1).in_column(39)
       end
     end
 
     context 'resource with wrong number of spaces between title and bracket' do
       let(:code) { "
-        file{'/tmp/bad2': ensure => file; }
         file {'/tmp/bad3': ensure => file; }
         file {   '/tmp/bad6': ensure => file; }"
       }
 
-      it 'should detect three problems' do
-        expect(problems).to have(3).problem
-      end
-
-      it 'should create three warnings' do
-        expect(problems).to contain_warning(msg).on_line(1).in_column(1)
-        expect(problems).to contain_warning(msg).on_line(2).in_column(1)
-        expect(problems).to contain_warning(msg).on_line(3).in_column(1)
-      end
-    end
-
-   context 'resource with wrong number of spaces between resource name and bracket' do
-      let(:code) { "
-        file{'/tmp/bad2': ensure => file; }
-        file   { '/tmp/bad5': ensure => file; }"
-      }
-
       it 'should detect two problems' do
-        expect(problems).to have(3).problem
+        expect(problems).to have(2).problem
       end
 
       it 'should create two warnings' do
-        expect(problems).to contain_warning(msg).on_line(1).in_column(1)
-        expect(problems).to contain_warning(msg).on_line(2.in_column(1)
+        expect(problems).to contain_warning(msg).on_line(1).in_column(15)
+        expect(problems).to contain_warning(msg).on_line(2).in_column(16)
       end
     end
   end
@@ -68,7 +50,7 @@ describe 'title_whitespace' do
       end
 
       it 'should fix the manifest' do
-        expect(problems).to contain_fixed(msg).on_line(1).in_column(4)
+        expect(problems).to contain_fixed(msg).on_line(1).in_column(39)
       end
 
       it 'should remove the title whitespace' do
@@ -78,47 +60,25 @@ describe 'title_whitespace' do
 
     context 'resource with wrong number of spaces between title and bracket' do
       let(:code) { "
-        file{'/tmp/bad2': ensure => file; }
         file {'/tmp/bad3': ensure => file; }
         file {   '/tmp/bad6': ensure => file; }"
       }
-
-      it 'should detect three problems' do
-        expect(problems).to have(3).problem
-      end
-
-      it 'should fix the manifest' do
-        expect(problems).to contain_fixed(msg).on_line(1).in_column(4)
-        expect(problems).to contain_fixed(msg).on_line(1).in_column(4)
-        expect(problems).to contain_fixed(msg).on_line(1).in_column(4)
-      end
-
-      it 'should adjust the title whitespace' do
-        expect(manifest).to eq(fixed) 
-      end
-    end
-
-    context 'resource with wrong number of spaces between resource name and bracket' do
-      let(:code) { "
-        file{'/tmp/bad2': ensure => file; }
-        file   { '/tmp/bad5': ensure => file; }"
-      }
       let(:fixed) { "
-        file { '/tmp/bad2': ensure => file; }
-        file { '/tmp/bad5': ensure => file; }"
+        file { '/tmp/bad3': ensure => file; }
+        file { '/tmp/bad6': ensure => file; }"
       }
-      
+
       it 'should detect two problems' do
         expect(problems).to have(2).problem
       end
 
-      it 'should create two title warnings' do
-        expect(problems).to contain_fixed(msg).on_line(3).in_column(1)
-        expect(problems).to contain_fixed(msg).on_line(3).in_column(1)
+      it 'should fix the manifest' do
+        expect(problems).to contain_fixed(msg).on_line(2).in_column(15)
+        expect(problems).to contain_fixed(msg).on_line(3).in_column(16)
       end
 
-      it 'should adjust incorrect title whitespace' do
-        expect(manifest).to eq(fixed)
+      it 'should adjust the title whitespace' do
+        expect(manifest).to eq(fixed) 
       end
     end
   end
