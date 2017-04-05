@@ -51,11 +51,10 @@ PuppetLint.new_check(:trailing_whitespace) do
     tokens.delete(problem[:token])
   end
 end
-
-# Public: Check the manifest tokens for whitespace around the left bracket that is missing and record a warning for each instance found.
+# Public: Check the manifest tokens for whitespace before left bracket that is missing and record a warning for each instance found.
 # #
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
-PuppetLint.new_check(:'no_lbrace_whitespace') do
+PuppetLint.new_check(:'left_lbrace_whitespace') do
   def check
     tokens.each do |token|
       unless token.next_token.nil?
@@ -66,7 +65,25 @@ PuppetLint.new_check(:'no_lbrace_whitespace') do
             :column  => token.column,
             :token   => token,
           }
-        elsif token.type == :LBRACE 
+          end
+        end
+      end
+    end
+  end
+
+  def fix(problem)
+      tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
+  end
+end
+
+# Public: Check the manifest tokens for whitespace after the left bracket that is missing and record a warning for each instance found.
+# #
+# https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
+PuppetLint.new_check(:'right_lbrace_whitespace') do
+  def check
+    tokens.each do |token|
+      unless token.next_token.nil?
+        if token.type == :LBRACE 
           unless [:WHITESPACE, :NEWLINE].include?(token.next_token.type)
             notify :warning, {
               :message => 'space needed on right side of opening bracket',
@@ -85,24 +102,43 @@ PuppetLint.new_check(:'no_lbrace_whitespace') do
   end
 end
 
-# Public: Check the manifest tokens for resource type declaration that has whitespace before a colon/semi-colon,  or no whitespace after and record a warning for each instance found.
+# Public: Check the manifest tokens for resource type declaration that has no whitespace before a colon and record a warning for each instance found.
 # #
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
-PuppetLint.new_check(:'colon_whitespace') do
+PuppetLint.new_check(:'colon_whitespace_before') do
   def check
     #puts tokens.map(&:type).inspect
     tokens.each do |token|
-      unless token.next_token.nil?
-        if (token.type == :COLON && token.next_token.next_token.type == :WHITESPACE)
+      unless token.prev_token.nil?
+        if (token.type == :COLON && token.prev_token.type == :WHITESPACE)
         notify :warning, {
-          :message => 'incorrect colon or semicolon spacing found',
+          :message => 'there should be no space before a colon',
           :line    => token.line,
           :column  => token.column,
           :token   => token,
         }
+      end
+    end
+  end
+
+  def fix(problem)
+    if problem[:token]
+      #tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
+    end
+  end
+end
+
+# Public: Check the manifest tokens for resource type declaration that has no whitespace after a colon, and record a warning for each instance found.
+# #
+# https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
+PuppetLint.new_check(:'no_colon_whitespace_after') do
+  def check
+    #puts tokens.map(&:type).inspect
+    tokens.each do |token|
+      unless token.next_token.nil? 
         elsif (token.type == :COLON && token.next_token.type != :WHITESPACE)
           notify :warning, {
-            :message => 'incorrect colon or semicolon spacing found',
+            :message => 'there should be a space after the colon',
             :line    => token.line,
             :column  => token.column,
             :token   => token,

@@ -1,22 +1,20 @@
 require 'spec_helper'
 
-describe 'resource_whitespace' do
-  let(:msg) { 'incorrect resource declaration spacing found' }
+describe 'multiple_whitespace' do
+  let(:msg) { 'multiple spaces found in whitespace that does not start line' }
 
   context 'with fix disabled' do
    context 'incorrect spacing around resource type' do
       let(:code) { "
-        file{ '/tmp/bad2': ensure => file; }
         file   { '/tmp/bad5': ensure => file; }"
       }
 
-      it 'should detect two problems' do
-        expect(problems).to have(2).problem
+      it 'should only detect one problem' do
+        expect(problems).to have(1).problem
       end
 
-      it 'should create two warnings' do
+      it 'should create one warning' do
         expect(problems).to contain_warning(msg).on_line(1).in_column(14)
-        expect(problems).to contain_warning(msg).on_line(2).in_column(14)
       end
     end
   end
@@ -32,22 +30,19 @@ describe 'resource_whitespace' do
 
     context 'incorrect spacing around resource type' do
       let(:code) { "
-        file{ '/tmp/bad2': ensure => file; }
         file   { '/tmp/bad5': ensure => file; }"
       }
     
       let(:fixed) { "
-        file { '/tmp/bad2': ensure => file; }
         file { '/tmp/bad5': ensure => file; }"
       }
       
-      it 'should detect two problems' do
-        expect(problems).to have(2).problem
+      it 'should only detect one problem' do
+        expect(problems).to have(1).problem
       end
 
       it 'should create two warnings' do
         expect(problems).to contain_fixed(msg).on_line(1).in_column(13)
-        expect(problems).to contain_fixed(msg).on_line(2).in_column(14)
       end
 
       it 'should adjust incorrect resource whitespace' do
