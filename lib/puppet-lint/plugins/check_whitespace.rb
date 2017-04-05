@@ -52,55 +52,99 @@ PuppetLint.new_check(:trailing_whitespace) do
   end
 end
 
-# Public: Check the manifest tokens for title whitespace that is incorrect and record a warning for each instance found.
+# Public: Check the manifest tokens for whitespace around the left bracket that is missing and record a warning for each instance found.
 # #
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
-PuppetLint.new_check(:'title_whitespace') do
+PuppetLint.new_check(:'no_lbrace_whitespace') do
   def check
-    puts tokens.map(&:type).inspect
     tokens.each do |token|
-      break if token.next_token.next_token.nil?
-      if (token.next_token.type != :WHITESPACE || token.next_token.next_token.type == :WHITESPACE)
-      notify :warning, {
-        :message => 'incorrect type declaration spacing found',
-        :line    => token.line,
-        :column  => token.column,
-        :token   => token,
-      }
+      unless token.next_token.nil?
+        if (token.type != :WHITESPACE && token.next_token.type == :LBRACE)
+          notify :warning, {
+            :message => 'space needed on left side of opening bracket',
+            :line    => token.line,
+            :column  => token.column,
+            :token   => token,
+          }
+        elsif token.type == :LBRACE 
+          unless [:WHITESPACE, :NEWLINE].include?(token.next_token.type)
+            notify :warning, {
+              :message => 'space needed on right side of opening bracket',
+              :line    => token.line,
+              :column  => token.column,
+              :token   => token,
+            }
+          end
+        end
       end
     end
   end
+
+  def fix(problem)
+      tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
+  end
 end
 
-# Public: Check the manifest tokens for resource type declaration that have more # or less than one space of separation and record a warning for each instance found.
+# Public: Check the manifest tokens for resource type declaration that has whitespace before a colon/semi-colon,  or no whitespace after and record a warning for each instance found.
 # #
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
-PuppetLint.new_check(:'resource_whitespace') do
+PuppetLint.new_check(:'colon_whitespace') do
   def check
-    puts tokens.map(&:type).inspect
+    #puts tokens.map(&:type).inspect
     tokens.each do |token|
-      break if token.next_token.next_token.nil?
-      if (token.next_token.type != :WHITESPACE || token.next_token.next_token.type == :WHITESPACE)
-      notify :warning, {
-        :message => 'incorrect resource declaration spacing found',
-        :line    => token.line,
-        :column  => token.column,
-        :token   => token,
-      }
+      unless token.next_token.nil?
+        if (token.type == :COLON && token.next_token.next_token.type == :WHITESPACE)
+        notify :warning, {
+          :message => 'incorrect colon or semicolon spacing found',
+          :line    => token.line,
+          :column  => token.column,
+          :token   => token,
+        }
+        elsif (token.type == :COLON && token.next_token.type != :WHITESPACE)
+          notify :warning, {
+            :message => 'incorrect colon or semicolon spacing found',
+            :line    => token.line,
+            :column  => token.column,
+            :token   => token,
+          }
+        end
       end
     end
   end
 
   def fix(problem)
     if problem[:token]
-      prev_token = problem[:token].prev_token
-      next_token = problem[:token].next_token
-      prev_token.next_token = next_token
-      next_token.prev_token = prev_token unless next_token != :WHITESPACE
-      tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
+      #tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
     end
   end
 end
+
+# Public: Check the manifest tokens for multiple spaces in whitespace that is not after a newline and record a warning for each instance found.
+# #
+# https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
+PuppetLint.new_check(:'multiple_whitespace') do
+  def check
+    puts tokens.map(&:type).inspect
+    whitespace_tokens = tokens.select { |r| r.type == :WHITESPACE}
+    whitespace_tokens.each do |token|
+      if (token.value != " " && token.prev_token != :NEWLINE)
+        notify :warning, {
+          :message => 'multiple spaces found in whitespace that does not start line',
+          :line    => token.line,
+          :column  => token.column,
+          :token   => token,
+        }
+      end
+    end
+  end
+
+  def fix(problem)
+    if problem[:token]
+      problem[:token].value = " "
+    end
+  end
+end
+
 
 
 # Public: Test the raw manifest string for lines containing more than 140
