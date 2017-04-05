@@ -14,7 +14,7 @@ describe 'multiple_whitespace' do
       end
 
       it 'should create one warning' do
-        expect(problems).to contain_warning(msg).on_line(1).in_column(14)
+        expect(problems).to contain_warning(msg).on_line(2).in_column(13)
       end
     end
   end
@@ -41,8 +41,8 @@ describe 'multiple_whitespace' do
         expect(problems).to have(1).problem
       end
 
-      it 'should create two warnings' do
-        expect(problems).to contain_fixed(msg).on_line(1).in_column(13)
+      it 'should create one warning' do
+        expect(problems).to contain_fixed(msg).on_line(2).in_column(13)
       end
 
       it 'should adjust incorrect resource whitespace' do

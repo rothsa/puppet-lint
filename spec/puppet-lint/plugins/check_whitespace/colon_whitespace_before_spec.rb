@@ -12,7 +12,7 @@ describe 'colon_whitespace_before' do
       end
 
       it 'should create a warning' do
-        expect(problems).to contain_warning(msg).on_line(1).in_column(39)
+        expect(problems).to contain_warning(msg).on_line(1).in_column(20)
       end
     end
   end
@@ -34,7 +34,7 @@ describe 'colon_whitespace_before' do
       end
 
       it 'should fix the manifest' do
-        expect(problems).to contain_fixed(msg).on_line(1).in_column(39)
+        expect(problems).to contain_fixed(msg).on_line(1).in_column(20)
       end
 
       it 'should remove the title whitespace' do

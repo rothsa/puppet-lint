@@ -5,16 +5,14 @@ describe 'left_lbrace_whitespace' do
 
   context 'with fix disabled' do
    context 'incorrect spacing around resource type' do
-      let(:code) { "
-        file{ '/tmp/bad2': ensure => file; }"
-      }
+      let(:code) { "file{ '/tmp/bad2': ensure => file; }"}
 
       it 'should detect only one problem' do
         expect(problems).to have(1).problem
       end
 
       it 'should create one warning' do
-        expect(problems).to contain_warning(msg).on_line(1).in_column(14)
+        expect(problems).to contain_warning(msg).on_line(1).in_column(1)
       end
     end
   end
@@ -29,20 +27,16 @@ describe 'left_lbrace_whitespace' do
     end
 
     context 'incorrect spacing around resource type' do
-      let(:code) { "
-        file{ '/tmp/bad2': ensure => file; }"
-      }
+      let(:code) { "file{ '/tmp/bad2': ensure => file; }"}
     
-      let(:fixed) { "
-        file { '/tmp/bad2': ensure => file; }"
-      }
+      let(:fixed) { "file { '/tmp/bad2': ensure => file; }"}
       
       it 'should detect only one problem' do
         expect(problems).to have(1).problem
       end
 
       it 'should create two warnings' do
-        expect(problems).to contain_fixed(msg).on_line(1).in_column(13)
+        expect(problems).to contain_fixed(msg).on_line(1).in_column(1)
       end
 
       it 'should adjust incorrect resource whitespace' do
