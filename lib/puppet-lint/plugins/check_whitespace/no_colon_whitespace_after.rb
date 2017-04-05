@@ -18,8 +18,7 @@ PuppetLint.new_check(:'no_colon_whitespace_after') do
   end
 
   def fix(problem)
-    if problem[:token]
-      #tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
-    end
+      index = tokens.index(problem[:token].next_token)  
+      tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
   end
 end

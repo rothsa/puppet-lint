@@ -1,7 +1,7 @@
 # Public: Check the manifest tokens for resource type declaration that has no whitespace before a colon and record a warning for each instance found.
 # #
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
-PuppetLint.new_check(:'colon_whitespace_before') do
+PuppetLint.new_check(:colon_whitespace_before) do
   def check
     #puts tokens.map(&:type).inspect
     tokens.each do |token|
@@ -19,8 +19,6 @@ PuppetLint.new_check(:'colon_whitespace_before') do
   end
 
   def fix(problem)
-    if problem[:token]
-      #tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
-    end
+    tokens.delete(problem[:token].prev_token)
   end
 end

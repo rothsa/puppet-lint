@@ -20,6 +20,7 @@ PuppetLint.new_check(:'right_lbrace_whitespace') do
   end
 
   def fix(problem)
-      tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0))
+    index = tokens.index(problem[:token].next_token)
+    tokens.insert(index, PuppetLint::Lexer::Token.new(:WHITESPACE, " ", 0, 0)) 
   end
 end

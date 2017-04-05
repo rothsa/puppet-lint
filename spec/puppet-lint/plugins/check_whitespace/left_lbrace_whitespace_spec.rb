@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe 'left_lbrace_whitespace' do
-  let(:msg) { 'incorrect resource declaration spacing found' }
+  let(:msg) { 'space needed on left side of opening bracket' }
 
   context 'with fix disabled' do
    context 'incorrect spacing around resource type' do
@@ -35,7 +35,7 @@ describe 'left_lbrace_whitespace' do
         expect(problems).to have(1).problem
       end
 
-      it 'should create two warnings' do
+      it 'should create one warning' do
         expect(problems).to contain_fixed(msg).on_line(1).in_column(1)
       end
 

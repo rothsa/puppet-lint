@@ -3,7 +3,6 @@
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
 PuppetLint.new_check(:'multiple_whitespace') do
   def check
-    puts tokens.map(&:type).inspect
     whitespace_tokens = tokens.select { |r| r.type == :WHITESPACE}
     whitespace_tokens.each do |token|
       if (token.value != " " && token.prev_token != :NEWLINE)
