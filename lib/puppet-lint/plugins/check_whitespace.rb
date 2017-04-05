@@ -134,7 +134,6 @@ end
 # https://docs.puppet.com/guides/style_guide.html#spacing-indentation-and-whitespace
 PuppetLint.new_check(:'no_colon_whitespace_after') do
   def check
-    #puts tokens.map(&:type).inspect
     tokens.each do |token|
       unless token.next_token.nil? 
         if (token.type == :COLON && token.next_token.type != :WHITESPACE)
