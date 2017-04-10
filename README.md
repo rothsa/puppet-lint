@@ -2,18 +2,17 @@
 
 [![Build
 Status](https://secure.travis-ci.org/rodjek/puppet-lint.png)](http://travis-ci.org/rodjek/puppet-lint)
-[![Dependency
-Status](https://gemnasium.com/rodjek/puppet-lint.png)](http://gemnasium.com/rodjek/puppet-lint)
+[![Inline docs](http://inch-ci.org/github/rodjek/puppet-lint.png?branch=master)](http://inch-ci.org/github/rodjek/puppet-lint)
 
-The goal of this project is to implement as many of the recommended Puppet
+Puppet Lint will test modules and manifests against the recommended Puppet
 style guidelines from the [Puppet Labs style
-guide](http://docs.puppetlabs.com/guides/style_guide.html) as practical. It is not meant to validate syntax. Please use `puppet parser validate` for that.
+guide](http://docs.puppetlabs.com/guides/style_guide.html) as closely as practical. It is not meant to validate syntax. Please use `puppet parser validate` for that.
 
 ## Installation
 
     gem install puppet-lint
 
-## Testing your manifests
+## Usage
 
 ### By hand
 
@@ -21,14 +20,103 @@ You can test a single manifest file by running
 
     puppet-lint <path to file>
 
-### Rake task
+Puppet Lint has a large number of options to modify which checks should be run.
+
+You can disable any of the checks when running the `puppet-lint` command by
+adding a `--no-<check name>-check` flag to the command.  For example, if you
+wanted to skip the 140 character check, you would run
+```  
+    puppet-lint --no-140chars-check <path to file>
+```
+
+You can also instruct puppet-lint to automatically fix issues it detects with the `--fix` flag.
+```
+    puppet-lint --fix /modules
+```
+
+Note that this can be combined with the `--only-checks` option to help avoid enormous patch sets.
+```
+    puppet-lint --only-checks trailing_whitespace --fix modules/
+```
+
+You can also use [control comments](http://puppet-lint.com/controlcomments/) to disable checks
+within puppet code on a per line or per block basis using `#lint:ignore:<check_name>`:
+```
+    class foo {
+      $bar = 'bar'
+      # This ignores the double_quoted_strings check over multiple lines
+      # lint:ignore:double_quoted_strings
+      $baz = "baz"
+      $gronk = "gronk"
+      # lint:endignore
+
+      # This ignores the 140chars check on a single line
+      $this_line_has_a_really_long_name_and_value_that_is_much_longer_than_the_style_guide_recommends = "I mean, a really, really long line like you can't believe" # lint:ignore:140chars
+    }
+```
+
+See puppet-lint --help for a full list of options.
+
+### Rake
 
 If you want to test your entire Puppet manifest directory, you can add
 `require 'puppet-lint/tasks/puppet-lint'` to your Rakefile and then run
 
     rake lint
 
-## Implemented tests
+If you want to modify the default behaviour of the rake task, you can modify
+the PuppetLint configuration by defining the task yourself.
+
+    PuppetLint::RakeTask.new :lint do |config|
+      # Pattern of files to check, defaults to `**/*.pp`
+      config.pattern = 'modules'
+
+      # Pattern of files to ignore
+      config.ignore_paths = ['modules/apt', 'modules/stdlib']
+
+      # List of checks to disable
+      config.disable_checks = ['documentation', '140chars']
+
+      # Should puppet-lint prefix it's output with the file being checked,
+      # defaults to true
+      config.with_filename = false
+
+      # Should the task fail if there were any warnings, defaults to false
+      config.fail_on_warnings = true
+
+      # Format string for puppet-lint's output (see the puppet-lint help output
+      # for details
+      config.log_format = '%{filename} - %{message}'
+
+      # Print out the context for the problem, defaults to false
+      config.with_context = true
+
+      # Enable automatic fixing of problems, defaults to false
+      config.fix = true
+
+      # Show ignored problems in the output, defaults to false
+      config.show_ignored = true
+
+      # Compare module layout relative to the module root
+      config.relative = true
+    end
+
+### Settings
+
+puppet-lint will also check for a `.puppet-lint.rc` file in the current
+directory and your home directory and read in flags from there, so if you
+wanted to always skip the hard tab character check, you could create
+`~/.puppet-lint.rc` containing
+
+```
+--no-hard_tabs-check
+```
+
+## Compatibility Warning
+
+Release 2.1.0 of puppet-lint is the last planned version with support for Puppet 3 and Ruby 1.8.7. Future versions will drop support for these versions.
+
+## Implemented Tests
 
 At the moment, the following tests have been implemented:
 
@@ -37,7 +125,7 @@ At the moment, the following tests have been implemented:
  * Must use two-space soft tabs.
  * Must not use literal tab characters.
  * Must not contain trailing white space.
- * Should not exceed an 80 character line width
+ * Should not exceed an 140 character line width
    * An exception has been made for `source => 'puppet://...'` lines as
      splitting these over multiple lines decreases the readability of the
      manifests.
@@ -51,6 +139,9 @@ At the moment, the following tests have been implemented:
  * All strings that contain variables must be enclosed in double quotes.
  * All variables should be enclosed in braces when interpolated in a string.
  * Variables standing by themselves should not be quoted.
+
+### Capitalization
+ * All variables should be in lowercase
 
 ### Resources
 
@@ -82,177 +173,16 @@ At the moment, the following tests have been implemented:
  * When using top-scope variables, including facts, Puppet modules should
    explicitly specify the empty namespace.
 
-## Fixing problems
-
-### right_to_left_relationship
-
-```
-WARNING: right-to-left (<-) relationship on line X
-```
-
-While right to left relationships are perfectly valid, it's highly recommended
-that you don't use them as most people think and read from left to right and
-this can lead to confusion.
-
-Bad:
-
-```
-Service['httpd'] <- Package['httpd']
-```
-
-Good:
-
-```
-Package['httpd'] -> Service['httpd']
-```
-
-### autoloader_layout
-
-```
-ERROR: mymodule::myclass not in autoload module layout on line X
-```
-
-Puppet attempts to autoload only the required manifests for the resources and
-classes specified in your manifests.  In order to do this, the autoloader
-expects your manifests to be laid out on disk in a particular format.  For
-example, when you use `mymodule::myclass` in your manifests, Puppet will
-attempt to read `<modulepath>/mymodule/manifests/myclass.pp`.  The only
-exception to this is when you reference `mymodule` itself (without any
-subclass/subtype) in which case it will read
-`<modulepath>/mymodule/manifests/init.pp`.
-
-### parameter_order
-
-```
-WARNING: optional parameter listed before required parameter on line X
-```
-
-In parameterised class and defined type definitions, parameters that are
-required should be listed before optional parameters (those with default
-values).
-
-Bad:
-
-```
-class foo($bar='baz', $gronk) {
-```
-
-Good:
-
-```
-class foo($gronk, $bar='baz') {
-```
-
-### inherits_across_namespaces
-
-Placeholder
-
-### nested_classes_or_defines
-
-Placeholder
-
-### variable_scope
-
-Placeholder
-
-### selector_inside_resource
-
-Placeholder
-
-### case_without_default
-
-Placeholder
-
-### unquoted_resource_title
-
-Placeholder
-
-### ensure_first_param
-
-Placeholder
-
-### unquoted_file_mode
-
-Placeholder
-
-### user_instead_of_owner
-
-Checks if the 'user' field is set on a file resource (should be 'owner')
-
-Bad:
-
-```
-file { 'foo': user => :root }
-```
-
-Good:
-
-```
-file { 'foo': owner => :root }
-```
-
-### 4digit_file_mode
-
-Placeholder
-
-### ensure_not_symlink_target
-
-Placeholder
-
-### double_quoted_strings
-
-Placeholder
-
-### only_variable_string
-
-Placeholder
-
-### variables_not_enclosed
-
-Placeholder
-
-### single_quote_string_with_variables
-
-Placeholder
-
-### quoted_booleans
-
-Placeholder
-
-### variable_contains_dash
-
-Placeholder
-
-### hard_tabs
-
-Placeholder
-
-### trailing_whitespace
-
-Placeholder
-
-### 80chars
-
-Placeholder
-
-### 2sp_soft_tabs
-
-Placeholder
-
-### arrow_alignment
-
-Placeholder
-
 ## Disabling checks
 
 ### puppet-lint
 
 You can disable any of the checks when running the `puppet-lint` command by
 adding a `--no-<check name>-check` flag to the command.  For example, if you
-wanted to skip the 80 character check, you would run
+wanted to skip the 140 character check, you would run
 
 ```
-puppet-lint --no-80chars-check /path/to/my/manifest.pp
+puppet-lint --no-140chars-check /path/to/my/manifest.pp
 ```
 
 puppet-lint will also check for a `.puppet-lint.rc` file in the current
@@ -270,7 +200,6 @@ For a list of all the flags just type:
 puppet-lint --help
 ```
 
-
 ### Rake task
 
 You can also disable checks when running puppet-lint through the supplied Rake
@@ -281,10 +210,10 @@ task.  Simply add the following line after the `require` statement in your
 PuppetLint.configuration.send("disable_<check name>")
 ```
 
-So, to disable the 80 character check, you would add:
+So, to disable the 140 character check, you would add:
 
 ``` ruby
-PuppetLint.configuration.send("disable_80chars")
+PuppetLint.configuration.send("disable_140chars")
 ```
 
 The Rake task also supports ignoring certain paths
@@ -313,7 +242,7 @@ As well as the many people who have reported the issues they've had!
 
 ## License
 
-Copyright (c) 2011 Tim Sharpe
+Copyright (c) 2011-2016 Tim Sharpe
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

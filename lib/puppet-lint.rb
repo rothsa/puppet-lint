@@ -1,4 +1,5 @@
 require 'set'
+require 'json'
 require 'puppet-lint/version'
 require 'puppet-lint/lexer'
 require 'puppet-lint/configuration'
@@ -10,19 +11,43 @@ require 'puppet-lint/monkeypatches'
 class PuppetLint::NoCodeError < StandardError; end
 class PuppetLint::NoFix < StandardError; end
 
+# Public: The public interface to puppet-lint.
 class PuppetLint
   # Public: Gets/Sets the String manifest code to be checked.
   attr_accessor :code
 
+  # Public: Gets the String manifest with the errors fixed.
   attr_reader :manifest
 
+  # Public: Returns an Array of Hashes describing the problems found in the
+  # manifest.
+  #
+  # Each Hash will contain *at least*:
+  #   :check   - The Symbol name of the check that generated the problem.
+  #   :kind    - The Symbol kind of the problem (:error, :warning, or
+  #              :fixed).
+  #   :line    - The Integer line number of the location of the problem in
+  #              the manifest.
+  #   :column  - The Integer column number of the location of the problem in
+  #              the manifest.
+  #   :message - The String message describing the problem that was found.
   attr_reader :problems
+
+  # Public: Gets/Sets the String path to the manifest to be checked.
+  attr_accessor :path
+
+  # Public: Returns a Hash of linter statistics
+  #
+  #   :error   - An Integer count of errors found in the manifest.
+  #   :warning - An Integer count of warnings found in the manifest.
+  #   :fixed   - An Integer count of problems found in the manifest that were
+  #              automatically fixed.
+  attr_reader :statistics
 
   # Public: Initialise a new PuppetLint object.
   def initialize
     @code = nil
-    @statistics = {:error => 0, :warning => 0, :fixed => 0}
-    @fileinfo = {:path => ''}
+    @statistics = {:error => 0, :warning => 0, :fixed => 0, :ignored => 0}
     @manifest = ''
   end
 
@@ -46,10 +71,7 @@ class PuppetLint
   # Returns nothing.
   def file=(path)
     if File.exist? path
-      @fileinfo[:path] = path
-      ## expand path but use the current directory as reference.
-      @fileinfo[:fullpath] = File.expand_path(path, ENV['PWD'])
-      @fileinfo[:filename] = File.basename(path)
+      @path = path
       @code = File.read(path)
     end
   end
@@ -62,7 +84,7 @@ class PuppetLint
   def log_format
     if configuration.log_format == ''
       ## recreate previous old log format as far as thats possible.
-      format = '%{KIND}: %{message} on line %{linenumber}'
+      format = '%{KIND}: %{message} on line %{line}'
       if configuration.with_filename
         format.prepend '%{path} - '
       end
@@ -79,6 +101,19 @@ class PuppetLint
   def format_message(message)
     format = log_format
     puts format % message
+    if message[:kind] == :ignored && !message[:reason].nil?
+      puts "  #{message[:reason]}"
+    end
+  end
+
+  # Internal: Get the line of the manifest on which the problem was found
+  #
+  # message - A Hash containing all the information about a problem.
+  #
+  # Returns the problematic line as a string.
+  def get_context(message)
+    line = PuppetLint::Data.manifest_lines[message[:line] - 1]
+    return line.strip
   end
 
   # Internal: Print out the line of the manifest on which the problem was found
@@ -90,7 +125,7 @@ class PuppetLint
   def print_context(message)
     return if message[:check] == 'documentation'
     return if message[:kind] == :fixed
-    line = PuppetLint::Data.manifest_lines[message[:linenumber] - 1]
+    line = get_context(message)
     offset = line.index(/\S/) || 1
     puts "\n  #{line.strip}"
     printf "%#{message[:column] + 2 - offset}s\n\n", '^'
@@ -103,17 +138,23 @@ class PuppetLint
   #
   # Returns nothing.
   def report(problems)
+    json = []
     problems.each do |message|
-      @statistics[message[:kind]] += 1
+      next if message[:kind] == :ignored && !PuppetLint.configuration.show_ignored
 
-      message.merge!(@fileinfo) {|key, v1, v2| v1 }
       message[:KIND] = message[:kind].to_s.upcase
 
       if message[:kind] == :fixed || [message[:kind], :all].include?(configuration.error_level)
-        format_message message
-        print_context(message) if configuration.with_context
+        if configuration.json
+          message['context'] = get_context(message) if configuration.with_context
+          json << message
+        else
+          format_message message
+          print_context(message) if configuration.with_context
+        end
       end
     end
+    puts JSON.pretty_generate(json) if configuration.json
   end
 
   # Public: Determine if PuppetLint found any errors in the manifest.
@@ -140,20 +181,47 @@ class PuppetLint
       raise PuppetLint::NoCodeError
     end
 
+    if @code.empty?
+      @problems = []
+      @manifest = ''
+      return
+    end
+
     linter = PuppetLint::Checks.new
-    @problems = linter.run(@fileinfo, @code)
+    @problems = linter.run(@path, @code)
+    @problems.each { |problem| @statistics[problem[:kind]] += 1 }
 
     @manifest = linter.manifest if PuppetLint.configuration.fix
+  end
 
+  # Public: Print any problems that were found out to stdout.
+  #
+  # Returns nothing.
+  def print_problems
     report @problems
   end
 
+  # Public: Define a new check.
+  #
+  # name  - A unique name for the check as a Symbol.
+  # block - The check logic. This must contain a `check` method and optionally
+  #         a `fix` method.
+  #
+  # Returns nothing.
+  #
+  # Examples
+  #
+  #   PuppetLint.new_check(:foo) do
+  #     def check
+  #     end
+  #   end
   def self.new_check(name, &block)
     class_name = name.to_s.split('_').map(&:capitalize).join
     klass = PuppetLint.const_set("Check#{class_name}", Class.new(PuppetLint::CheckPlugin))
     klass.const_set('NAME', name)
     klass.class_exec(&block)
     PuppetLint.configuration.add_check(name, klass)
+    PuppetLint::Data.ignore_overrides[name] ||= {}
   end
 end
 

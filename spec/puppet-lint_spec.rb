@@ -5,16 +5,22 @@ describe PuppetLint do
 
   it 'should accept manifests as a string' do
     subject.code = "class foo { }"
-    subject.code.should_not be_nil
+    expect(subject.code).to_not be_nil
   end
 
   it 'should have support for % with a hash' do
     string = 'replace %{hash}' % {:hash => 'replaced'}
-    string.should match 'replace replaced'
+    expect(string).to match('replace replaced')
   end
 
   it 'should not break regular % support' do
     string = 'replace %s %s' % ['get','replaced']
-    string.should match 'replace get replaced'
+    expect(string).to match('replace get replaced')
+  end
+
+  it 'should return empty manifest when empty one given as the input' do
+    subject.code = ''
+    subject.run
+    expect(subject.manifest).to eq ''
   end
 end
